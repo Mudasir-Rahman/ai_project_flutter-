@@ -1,12 +1,15 @@
+import 'package:dartz/dartz.dart';
+import 'package:study_forge_ai/src/core/error/failures.dart';
+
 import '../repository/respository_interface.dart';
 import '../auth_entity/entity.dart';
 
 class SignupUsecase {
   final AuthRepositoryInterface repository;
   SignupUsecase(this.repository);
-  Future<UserEntity> call({SignupParams? params}) {
-    return repository.signUp(
-      email: params!.email,
+  Future<Either<Failures, UserEntity>> call(SignupParams params) async {
+    return await repository.signUp(
+      email: params.email,
       password: params.password,
       name: params.name,
     );

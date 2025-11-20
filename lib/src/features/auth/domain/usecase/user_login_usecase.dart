@@ -1,17 +1,24 @@
-import '../repository/respository_interface.dart';
-import '../auth_entity/entity.dart';
+import 'package:dartz/dartz.dart';
+import 'package:study_forge_ai/src/core/error/failures.dart';
+import 'package:study_forge_ai/src/core/useCase/use_case.dart' show UseCase;
+import 'package:study_forge_ai/src/features/auth/domain/auth_entity/entity.dart';
+import 'package:study_forge_ai/src/features/auth/domain/repository/respository_interface.dart';
 
-class SigninUsecase {
+class UserLoginUsecase implements UseCase<UserEntity, UserLoginParams> {
   final AuthRepositoryInterface repository;
-  SigninUsecase(this.repository);
-  Future<UserEntity> call({SignInParams? params}) {
-    return repository.signIn(email: params!.email, password: params.password);
+  UserLoginUsecase(this.repository);
+  @override
+  Future<Either<Failures, UserEntity>> call(UserLoginParams params) async {
+    return await repository.login(
+      email: params.email,
+      password: params.password,
+    );
   }
 }
 
-class SignInParams {
+class UserLoginParams {
   final String email;
   final String password;
 
-  SignInParams({required this.email, required this.password});
+  UserLoginParams({required this.email, required this.password});
 }
