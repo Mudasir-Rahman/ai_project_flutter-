@@ -3,8 +3,9 @@ import 'package:study_forge_ai/src/core/error/failures.dart';
 import 'package:study_forge_ai/src/features/auth/data/datasources/remote_data_source.dart';
 import 'package:study_forge_ai/src/features/auth/domain/auth_entity/entity.dart';
 import 'package:study_forge_ai/src/features/auth/domain/repository/respository_interface.dart';
-import 'package:study_forge_ai/src/features/auth/domain/usecase/signup_usecase.dart';
-import 'package:study_forge_ai/src/features/auth/domain/usecase/user_login_usecase.dart';
+
+import '../../domain/usecase/signup_usecase.dart';
+import '../../domain/usecase/user_login_usecase.dart';
 
 class RepositoryImpl implements AuthRepositoryInterface {
   final RemoteDataSource remoteDataSource;
@@ -20,14 +21,21 @@ class RepositoryImpl implements AuthRepositoryInterface {
       final userModel = await remoteDataSource.signUpWithEmail(
         SignupParams(email: email, password: password, name: name),
       );
+
+      if (userModel == null) {
+        return Left(ServerFailure('Signup returned null user'));
+      }
+
       return Right(
         UserEntity(
           id: userModel.id,
           email: userModel.email,
-          name: userModel.name,
+          name: userModel.name ?? '',
         ),
       );
-    } catch (e) {
+    } catch (e, st) {
+      print('signUp Error: $e');
+      print(st);
       return Left(ServerFailure(e.toString()));
     }
   }
@@ -41,8 +49,21 @@ class RepositoryImpl implements AuthRepositoryInterface {
       final user = await remoteDataSource.signInWithEmail(
         UserLoginParams(email: email, password: password),
       );
-      return Right(UserEntity(id: user.id, email: user.email, name: user.name));
-    } catch (e) {
+
+      if (user == null) {
+        return Left(ServerFailure('Login returned null user'));
+      }
+
+      return Right(
+        UserEntity(
+          id: user.id,
+          email: user.email,
+          name: user.name ?? '',
+        ),
+      );
+    } catch (e, st) {
+      print('login Error: $e');
+      print(st);
       return Left(ServerFailure(e.toString()));
     }
   }
@@ -52,8 +73,16 @@ class RepositoryImpl implements AuthRepositoryInterface {
     try {
       final user = await remoteDataSource.getCurrentUser();
       if (user == null) return const Right(null);
-      return Right(UserEntity(id: user.id, email: user.email, name: user.name));
-    } catch (e) {
+      return Right(
+        UserEntity(
+          id: user.id,
+          email: user.email,
+          name: user.name ?? '',
+        ),
+      );
+    } catch (e, st) {
+      print('getCurrentUser Error: $e');
+      print(st);
       return Left(ServerFailure(e.toString()));
     }
   }
@@ -62,15 +91,30 @@ class RepositoryImpl implements AuthRepositoryInterface {
   Future<Either<Failures, UserEntity>> register(String userId) async {
     try {
       final found = await remoteDataSource.register(userId);
-      if (!found) return Left(ServerFailure('User not found'));
-      return Right(UserEntity(id: userId, email: '', name: null));
-    } catch (e) {
+
+      if (!found) {
+        return Left(ServerFailure('User not found during register'));
+      }
+
+      return Right(
+        UserEntity(id: userId, email: '', name: ''),
+      );
+    } catch (e, st) {
+      print('register Error: $e');
+      print(st);
       return Left(ServerFailure(e.toString()));
     }
   }
 
   @override
   Future<void> signOut() async {
-    await remoteDataSource.signOut();
+    try {
+      await remoteDataSource.signOut();
+    } catch (e, st) {
+      print('signOut Error: $e');
+      print(st);
+      // Optionally, rethrow if your Bloc handles it
+      throw e;
+    }
   }
 }
