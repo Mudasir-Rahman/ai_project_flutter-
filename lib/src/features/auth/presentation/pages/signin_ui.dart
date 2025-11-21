@@ -195,7 +195,7 @@ class _SigninUiState extends State<SigninUi> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => const SignUpUi(),
+                                    builder: (context) => const SignupUi(),
                                   ),
                                 );
                               },

@@ -1,172 +1,101 @@
 import 'package:flutter/material.dart';
-import 'package:study_forge_ai/src/core/app_color/app_color.dart';
-import 'package:study_forge_ai/src/core/constants/app_buttons.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:study_forge_ai/src/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:study_forge_ai/src/features/auth/presentation/bloc/auth_event.dart';
+import 'package:study_forge_ai/src/features/auth/presentation/bloc/auth_state.dart';
 
-class SignUpUi extends StatefulWidget {
-  const SignUpUi({super.key});
+class SignupUi extends StatefulWidget {
+  const SignupUi({super.key});
 
   @override
-  State<SignUpUi> createState() => _SignUpUiState();
+  State<SignupUi> createState() => _SignupUiState();
 }
 
-class _SignUpUiState extends State<SignUpUi> {
+class _SignupUiState extends State<SignupUi> {
   final _formKey = GlobalKey<FormState>();
+  final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
-  final TextEditingController confirmPasswordController =
-      TextEditingController();
-  final TextEditingController userNameController = TextEditingController();
-
   bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
-  bool _isLoading = false;
 
   @override
   void dispose() {
+    nameController.dispose();
     emailController.dispose();
     passwordController.dispose();
-    confirmPasswordController.dispose();
-    userNameController.dispose();
     super.dispose();
   }
 
-  Future<void> _signUp() async {
+  void submitSignup() {
     if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isLoading = true;
-    });
-
-    // TODO: Implement your signup logic here
-    // Example: await authService.signUp(...);
-
-    await Future.delayed(const Duration(seconds: 2)); // Simulate API call
-
-    setState(() {
-      _isLoading = false;
-    });
-
-    // Show success message or navigate to next screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Account created successfully!')),
+    context.read<AuthBloc>().add(
+      SignupEvent(
+        name: nameController.text.trim(),
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      ),
     );
-  }
-
-  String? _validateName(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter your name';
-    }
-    if (value.length < 2) {
-      return 'Name must be at least 2 characters';
-    }
-    return null;
-  }
-
-  String? _validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter your email';
-    }
-    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-      return 'Please enter a valid email';
-    }
-    return null;
-  }
-
-  String? _validatePassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please enter a password';
-    }
-    if (value.length < 6) {
-      return 'Password must be at least 6 characters';
-    }
-    return null;
-  }
-
-  String? _validateConfirmPassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Please confirm your password';
-    }
-    if (value != passwordController.text) {
-      return 'Passwords do not match';
-    }
-    return null;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          SingleChildScrollView(
+      body: BlocConsumer<AuthBloc, AuthBlocState>(
+        listener: (context, state) {
+          if (state is AuthFailure) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message)));
+          } else if (state is AuthSuccess) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text("Signup Successful!")));
+            // Navigate to Home screen here
+          }
+        },
+        builder: (context, state) {
+          final isLoading = state is AuthLoading;
+
+          return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                const SizedBox(height: 40),
-                Center(
-                  child: Image.asset(
-                    'assets/login.png',
-                    width: 130,
-                    height: 130,
-                  ),
-                ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 50),
                 const Text(
-                  "Ai Study Partner",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 22,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  "Create Your Account",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 26,
-                    color: Colors.black87,
-                  ),
+                  "Create Account",
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 26),
                 ),
                 const SizedBox(height: 20),
                 Form(
                   key: _formKey,
                   child: Column(
                     children: [
-                      // Name field
                       TextFormField(
-                        controller: userNameController,
+                        controller: nameController,
                         decoration: const InputDecoration(
-                          label: Text('Full Name'),
+                          labelText: 'Name',
                           border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.person_outline),
                         ),
-                        validator: _validateName,
-                        textInputAction: TextInputAction.next,
+                        validator: (v) => v!.isEmpty ? 'Enter your name' : null,
                       ),
-                      const SizedBox(height: 16),
-
-                      // Email field
+                      const SizedBox(height: 20),
                       TextFormField(
                         controller: emailController,
                         decoration: const InputDecoration(
-                          label: Text('Email'),
+                          labelText: 'Email',
                           border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.email_outlined),
                         ),
-                        validator: _validateEmail,
-                        keyboardType: TextInputType.emailAddress,
-                        textInputAction: TextInputAction.next,
+                        validator: (v) =>
+                            v!.isEmpty ? 'Enter your email' : null,
                       ),
-                      const SizedBox(height: 16),
-
-                      // Password field
+                      const SizedBox(height: 20),
                       TextFormField(
                         controller: passwordController,
                         obscureText: _obscurePassword,
                         decoration: InputDecoration(
-                          label: const Text('Password'),
+                          labelText: 'Password',
                           border: const OutlineInputBorder(),
-                          prefixIcon: const Icon(Icons.lock_outline),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword
@@ -180,140 +109,24 @@ class _SignUpUiState extends State<SignUpUi> {
                             },
                           ),
                         ),
-                        validator: _validatePassword,
-                        textInputAction: TextInputAction.next,
+                        validator: (v) => v!.length < 6
+                            ? 'Password must be at least 6 characters'
+                            : null,
                       ),
-                      const SizedBox(height: 16),
-
-                      // Confirm Password field
-                      TextFormField(
-                        controller: confirmPasswordController,
-                        obscureText: _obscureConfirmPassword,
-                        decoration: InputDecoration(
-                          label: const Text('Confirm Password'),
-                          border: const OutlineInputBorder(),
-                          prefixIcon: const Icon(Icons.lock_outline),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscureConfirmPassword
-                                  ? Icons.visibility_off
-                                  : Icons.visibility,
+                      const SizedBox(height: 30),
+                      isLoading
+                          ? const CircularProgressIndicator()
+                          : ElevatedButton(
+                              onPressed: submitSignup,
+                              child: const Text("Sign Up"),
                             ),
-                            onPressed: () {
-                              setState(() {
-                                _obscureConfirmPassword =
-                                    !_obscureConfirmPassword;
-                              });
-                            },
-                          ),
-                        ),
-                        validator: _validateConfirmPassword,
-                        textInputAction: TextInputAction.done,
-                        onFieldSubmitted: (_) => _signUp(),
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Sign Up Button
-                      appButton(
-                        title: 'Sign Up',
-                        onpressed: _isLoading ? null : _signUp,
-                        expanded: true,
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Already have an account
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text(
-                            "Already have an account?",
-                            style: TextStyle(fontSize: 16, color: Colors.grey),
-                          ),
-                          TextButton(
-                            onPressed: _isLoading
-                                ? null
-                                : () {
-                                    Navigator.pop(context);
-                                  },
-                            child: Text(
-                              "Sign In",
-                              style: TextStyle(
-                                color: Color(AppColor.primary),
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Divider
-                      Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: Divider(
-                              color: Colors.grey.shade300,
-                              thickness: 1,
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              "OR",
-                              style: TextStyle(
-                                color: Colors.grey.shade600,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Divider(
-                              color: Colors.grey.shade300,
-                              thickness: 1,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-
-                      // Google Sign Up Button
-                      OutlinedButton.icon(
-                        icon: Image.asset(
-                          'assets/google.png',
-                          width: 24,
-                          height: 24,
-                        ),
-                        label: const Text(
-                          'Sign up with Google',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                        onPressed: _isLoading
-                            ? null
-                            : () {
-                                // TODO: Implement Google sign up
-                              },
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          side: BorderSide(color: Colors.grey.shade400),
-                          minimumSize: const Size(double.infinity, 50),
-                        ),
-                      ),
                     ],
                   ),
                 ),
               ],
             ),
-          ),
-
-          // Loading overlay
-          if (_isLoading)
-            Container(
-              // ignore: deprecated_member_use
-              color: Colors.black.withOpacity(0.3),
-              child: const Center(child: CircularProgressIndicator()),
-            ),
-        ],
+          );
+        },
       ),
     );
   }

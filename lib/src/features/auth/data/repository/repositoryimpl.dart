@@ -10,9 +10,6 @@ class RepositoryImpl implements AuthRepositoryInterface {
   final RemoteDataSource remoteDataSource;
   RepositoryImpl(this.remoteDataSource);
 
-  // =====================================================
-  //                      SIGN UP
-  // =====================================================
   @override
   Future<Either<Failures, UserEntity>> signUp({
     required String email,
@@ -23,7 +20,6 @@ class RepositoryImpl implements AuthRepositoryInterface {
       final userModel = await remoteDataSource.signUpWithEmail(
         SignupParams(email: email, password: password, name: name),
       );
-
       return Right(
         UserEntity(
           id: userModel.id,
@@ -36,9 +32,6 @@ class RepositoryImpl implements AuthRepositoryInterface {
     }
   }
 
-  // =====================================================
-  //                      LOGIN
-  // =====================================================
   @override
   Future<Either<Failures, UserEntity>> login({
     required String email,
@@ -48,58 +41,36 @@ class RepositoryImpl implements AuthRepositoryInterface {
       final user = await remoteDataSource.signInWithEmail(
         UserLoginParams(email: email, password: password),
       );
-
       return Right(UserEntity(id: user.id, email: user.email, name: user.name));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
   }
 
-  // =====================================================
-  //                 GET CURRENT USER
-  // =====================================================
   @override
   Future<Either<Failures, UserEntity?>> getCurrentUser() async {
     try {
       final user = await remoteDataSource.getCurrentUser();
       if (user == null) return const Right(null);
-
       return Right(UserEntity(id: user.id, email: user.email, name: user.name));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
   }
 
-  // =====================================================
-  //                      REGISTER CHECK
-  // =====================================================
   @override
   Future<Either<Failures, UserEntity>> register(String userId) async {
     try {
       final found = await remoteDataSource.register(userId);
-
-      if (!found) {
-        return Left(ServerFailure('User not found'));
-      }
-
-      // Only return ID since no other info is available
+      if (!found) return Left(ServerFailure('User not found'));
       return Right(UserEntity(id: userId, email: '', name: null));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
   }
 
-  // =====================================================
-  //                      SIGN OUT
-  // =====================================================
   @override
   Future<void> signOut() async {
-    return await remoteDataSource.signOut();
+    await remoteDataSource.signOut();
   }
-
-  @override
-  List<Object?> get props => [];
-
-  @override
-  bool? get stringify => true;
 }

@@ -4,7 +4,7 @@ import 'package:study_forge_ai/src/core/error/failures.dart';
 
 import '../auth_entity/entity.dart';
 
-abstract class AuthRepositoryInterface extends Equatable {
+abstract class AuthRepositoryInterface {
   Future<Either<Failures, UserEntity>> login({
     required String email,
     required String password,
@@ -20,7 +20,4 @@ abstract class AuthRepositoryInterface extends Equatable {
 
   Future<void> signOut();
   Future<Either<Failures, UserEntity>> register(String userId);
-
-  @override
-  List<Object?> get props => [];
 }
