@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class RemoteDataSourceImpl implements RemoteDataSource {
   final SupabaseClient supabaseClient;
+
   RemoteDataSourceImpl(this.supabaseClient);
 
   // =====================================================
@@ -113,8 +114,9 @@ class RemoteDataSourceImpl implements RemoteDataSource {
           .single();
 
       return UserModel.fromJson(data);
-    } catch (e) {
+    } catch (e, st) {
       print('Error fetching current user: $e');
+      print(st);
       return null;
     }
   }
@@ -132,8 +134,9 @@ class RemoteDataSourceImpl implements RemoteDataSource {
           .maybeSingle();
 
       return res != null;
-    } catch (e) {
+    } catch (e, st) {
       print('Error during register check: $e');
+      print(st);
       return false;
     }
   }
@@ -146,9 +149,58 @@ class RemoteDataSourceImpl implements RemoteDataSource {
     try {
       await supabaseClient.auth.signOut();
       print('User signed out successfully');
-    } catch (e) {
+    } catch (e, st) {
       print('Error during sign out: $e');
+      print(st);
       rethrow;
     }
   }
+
+// =====================================================
+//                      GOOGLE LOGIN
+// =====================================================
+
+
+  @override
+  Future<UserModel?> googleLogin() async {
+    try {
+      // 1️⃣ Start OAuth login (redirect to Google)
+      await supabaseClient.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: 'https://aybarnykcohzlqhetjbe.supabase.co/auth/v1/callback', // your deep link
+      );
+
+      // 2️⃣ After redirect completes, fetch the current user
+      final user = supabaseClient.auth.currentUser;
+      if (user == null) return null;
+
+      // 3️⃣ Check if user exists in 'users' table
+      final data = await supabaseClient
+          .from('users')
+          .select()
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (data != null) {
+        return UserModel.fromJson(data);
+      }
+
+      // 4️⃣ Insert new user if not exists
+      final name = user.userMetadata?['full_name'] ?? 'No Name';
+      await supabaseClient.from('users').insert({
+        'id': user.id,
+        'email': user.email,
+        'name': name,
+      });
+
+      return UserModel(id: user.id, email: user.email!, name: name);
+    } catch (e, st) {
+      print('Error during Google login: $e');
+      print(st);
+      return null;
+    }
+  }
+
 }
+
+

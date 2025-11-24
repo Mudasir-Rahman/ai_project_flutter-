@@ -3,7 +3,6 @@ import 'package:study_forge_ai/src/core/error/failures.dart';
 import 'package:study_forge_ai/src/features/auth/data/datasources/remote_data_source.dart';
 import 'package:study_forge_ai/src/features/auth/domain/auth_entity/entity.dart';
 import 'package:study_forge_ai/src/features/auth/domain/repository/respository_interface.dart';
-
 import '../../domain/usecase/signup_usecase.dart';
 import '../../domain/usecase/user_login_usecase.dart';
 
@@ -73,6 +72,7 @@ class RepositoryImpl implements AuthRepositoryInterface {
     try {
       final user = await remoteDataSource.getCurrentUser();
       if (user == null) return const Right(null);
+
       return Right(
         UserEntity(
           id: user.id,
@@ -113,8 +113,31 @@ class RepositoryImpl implements AuthRepositoryInterface {
     } catch (e, st) {
       print('signOut Error: $e');
       print(st);
-      // Optionally, rethrow if your Bloc handles it
       throw e;
+    }
+  }
+
+  // =================== GOOGLE LOGIN ===================
+  @override
+  Future<Either<Failures, UserEntity>> googleLogin() async {
+    try {
+      final userModel = await remoteDataSource.googleLogin();
+
+      if (userModel == null) {
+        return Left(ServerFailure('Google login failed'));
+      }
+
+      return Right(
+        UserEntity(
+          id: userModel.id,
+          email: userModel.email ?? '',
+          name: userModel.name ?? '',
+        ),
+      );
+    } catch (e, st) {
+      print('GoogleLogin Error: $e');
+      print(st);
+      return Left(ServerFailure(e.toString()));
     }
   }
 }

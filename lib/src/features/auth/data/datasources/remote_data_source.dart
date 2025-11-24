@@ -10,4 +10,5 @@ abstract class RemoteDataSource {
   Future<UserModel?> getCurrentUser();
   Future<void> signOut();
   Future<bool> register(String userId);
+  Future<UserModel?> googleLogin();
 }
