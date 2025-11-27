@@ -4,7 +4,8 @@ import 'package:study_forge_ai/init_dependence.dart'
     show initDependencies, serviceLocator;
 
 import 'package:study_forge_ai/src/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:study_forge_ai/src/features/auth/presentation/pages/signin_ui.dart';
+import 'package:study_forge_ai/src/features/home/presentation/bloc/home_bloc.dart';
+import 'package:study_forge_ai/src/features/home/presentation/pages/app_startup_wrapper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,14 +22,16 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
-      providers: [BlocProvider(create: (_) => serviceLocator<AuthBloc>())],
+      providers: [BlocProvider(create: (_) => serviceLocator<AuthBloc>()),
+      BlocProvider(create: (_) => serviceLocator<HomeDashboardBloc>()),
+      ],
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         title: 'AI Study Partner',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         ),
-        home: const SigninUi(),
+        home: const AppStartupWrapper(),
       ),
     );
   }

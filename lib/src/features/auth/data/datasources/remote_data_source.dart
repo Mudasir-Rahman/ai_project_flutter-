@@ -11,4 +11,5 @@ abstract class RemoteDataSource {
   Future<void> signOut();
   Future<bool> register(String userId);
   Future<UserModel?> googleLogin();
+  Future<bool>hasActiveSession();
 }

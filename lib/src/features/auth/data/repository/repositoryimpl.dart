@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:dartz/dartz.dart';
 import 'package:study_forge_ai/src/core/error/failures.dart';
 import 'package:study_forge_ai/src/features/auth/data/datasources/remote_data_source.dart';
@@ -8,6 +10,7 @@ import '../../domain/usecase/user_login_usecase.dart';
 
 class RepositoryImpl implements AuthRepositoryInterface {
   final RemoteDataSource remoteDataSource;
+
   RepositoryImpl(this.remoteDataSource);
 
   @override
@@ -140,4 +143,14 @@ class RepositoryImpl implements AuthRepositoryInterface {
       return Left(ServerFailure(e.toString()));
     }
   }
+// =================== Current Succession  ===================
+ Future<bool>hasActiveSession()async {
+   try {
+     final result = await remoteDataSource.getCurrentUser();
+     return result != null;
+   } catch (e) {
+     return false;
+   }
+ }
 }
+

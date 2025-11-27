@@ -105,17 +105,29 @@ class RemoteDataSourceImpl implements RemoteDataSource {
   Future<UserModel?> getCurrentUser() async {
     try {
       final user = supabaseClient.auth.currentUser;
-      if (user == null) return null;
+      if (user == null) {
+        print('❌ No auth user');
+        return null;
+      }
 
+      print('🔍 Fetching user data for ID: ${user.id}');
+
+      // Use maybeSingle() instead of single()
       final data = await supabaseClient
           .from('users')
           .select()
           .eq('id', user.id)
-          .single();
+          .maybeSingle(); // ← RETURNS NULL INSTEAD OF THROWING
 
+      if (data == null) {
+        print('❌ No user found in users table for ID: ${user.id}');
+        return null;
+      }
+
+      print('✅ User data found: $data');
       return UserModel.fromJson(data);
     } catch (e, st) {
-      print('Error fetching current user: $e');
+      print('❌ Error fetching current user: $e');
       print(st);
       return null;
     }
@@ -156,25 +168,33 @@ class RemoteDataSourceImpl implements RemoteDataSource {
     }
   }
 
-// =====================================================
-//                      GOOGLE LOGIN
-// =====================================================
-
-
+  // =====================================================
+  //                      GOOGLE LOGIN - CORRECTED
+  // =====================================================
   @override
   Future<UserModel?> googleLogin() async {
     try {
-      // 1️⃣ Start OAuth login (redirect to Google)
+      // ✅ CORRECT: Use the OAuth flow with await
       await supabaseClient.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: 'https://aybarnykcohzlqhetjbe.supabase.co/auth/v1/callback', // your deep link
+        redirectTo: 'studyforgeai://auth-callback', // Your app's custom scheme
       );
 
-      // 2️⃣ After redirect completes, fetch the current user
-      final user = supabaseClient.auth.currentUser;
-      if (user == null) return null;
+      //  IMPORTANT: In Flutter, OAuth login happens in a web browser
+      // The actual user data will be available after the browser redirects back to your app
 
-      // 3️⃣ Check if user exists in 'users' table
+      // Wait a moment for the auth state to update
+      await Future.delayed(const Duration(seconds: 2));
+
+      // Check if user is now logged in
+      final user = supabaseClient.auth.currentUser;
+      if (user == null) {
+        throw Exception('Google login failed or was cancelled');
+      }
+
+      print("Google login successful: User ID = ${user.id}");
+
+      // Check if user exists in 'users' table
       final data = await supabaseClient
           .from('users')
           .select()
@@ -185,22 +205,37 @@ class RemoteDataSourceImpl implements RemoteDataSource {
         return UserModel.fromJson(data);
       }
 
-      // 4️⃣ Insert new user if not exists
-      final name = user.userMetadata?['full_name'] ?? 'No Name';
+      // Insert new user if not exists
+      final name = user.userMetadata?['full_name'] ??
+          user.userMetadata?['name'] ??
+          'Google User';
+      final email = user.email ?? '${user.id}@google.com';
+
       await supabaseClient.from('users').insert({
         'id': user.id,
-        'email': user.email,
+        'email': email,
         'name': name,
       });
 
-      return UserModel(id: user.id, email: user.email!, name: name);
+      print("New Google user created: $name, $email");
+
+      return UserModel(id: user.id, email: email, name: name);
     } catch (e, st) {
       print('Error during Google login: $e');
       print(st);
-      return null;
+      rethrow;
     }
   }
-
+  // =====================================================
+  //                      SESSION CHECK - CORRECTED
+  // =====================================================
+  Future<bool> hasActiveSession() async {
+    try {
+      final session = supabaseClient.auth.currentSession;
+      return session != null;
+    } catch (e) {
+      print('Error checking session: $e');
+      return false;
+    }
+  }
 }
-
-
