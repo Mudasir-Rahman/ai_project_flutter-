@@ -3,6 +3,7 @@ import 'package:study_forge_ai/src/features/auth/domain/usecase/signup_usecase.d
     show SignupParams;
 import 'package:study_forge_ai/src/features/auth/domain/usecase/user_login_usecase.dart'
     show UserLoginParams;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 abstract class RemoteDataSource {
   Future<UserModel> signUpWithEmail(SignupParams params);
@@ -11,5 +12,6 @@ abstract class RemoteDataSource {
   Future<void> signOut();
   Future<bool> register(String userId);
   Future<UserModel?> googleLogin();
-  Future<bool>hasActiveSession();
+  Session? getSession();
+
 }

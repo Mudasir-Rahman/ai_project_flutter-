@@ -20,7 +20,6 @@ class RemoteDataSourceImpl implements RemoteDataSource {
     try {
       print('Signup started for email: $email');
 
-      // 1. Auth Sign Up
       final AuthResponse response = await supabaseClient.auth.signUp(
         email: email,
         password: password,
@@ -33,7 +32,6 @@ class RemoteDataSourceImpl implements RemoteDataSource {
 
       print("Auth Signup Successful: User ID = ${user.id}");
 
-      // 2. Insert into users table
       await supabaseClient.from('users').insert({
         'id': user.id,
         'email': email,
@@ -45,7 +43,7 @@ class RemoteDataSourceImpl implements RemoteDataSource {
       return UserModel(id: user.id, email: email, name: name);
     } catch (e, st) {
       print('Error during signup: $e');
-      print('Stack trace: $st');
+      print(st);
       rethrow;
     }
   }
@@ -76,7 +74,6 @@ class RemoteDataSourceImpl implements RemoteDataSource {
 
       print("Login successful: User ID = ${user.id}");
 
-      // Fetch user data
       final data = await supabaseClient
           .from('users')
           .select()
@@ -88,7 +85,7 @@ class RemoteDataSourceImpl implements RemoteDataSource {
       return UserModel.fromJson(data);
     } catch (e, st) {
       print('Error during login: $e');
-      print('Stack trace: $st');
+      print(st);
       rethrow;
     }
   }
@@ -112,12 +109,11 @@ class RemoteDataSourceImpl implements RemoteDataSource {
 
       print('🔍 Fetching user data for ID: ${user.id}');
 
-      // Use maybeSingle() instead of single()
       final data = await supabaseClient
           .from('users')
           .select()
           .eq('id', user.id)
-          .maybeSingle(); // ← RETURNS NULL INSTEAD OF THROWING
+          .maybeSingle();
 
       if (data == null) {
         print('❌ No user found in users table for ID: ${user.id}');
@@ -134,7 +130,7 @@ class RemoteDataSourceImpl implements RemoteDataSource {
   }
 
   // =====================================================
-  //                 REGISTER CHECK (OPTIONAL)
+  //                      REGISTER CHECK
   // =====================================================
   @override
   Future<bool> register(String userId) async {
@@ -169,55 +165,44 @@ class RemoteDataSourceImpl implements RemoteDataSource {
   }
 
   // =====================================================
-  //                      GOOGLE LOGIN - CORRECTED
+  //                      GOOGLE LOGIN
   // =====================================================
   @override
   Future<UserModel?> googleLogin() async {
     try {
-      // ✅ CORRECT: Use the OAuth flow with await
       await supabaseClient.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: 'studyforgeai://auth-callback', // Your app's custom scheme
+        redirectTo: 'studyforgeai://auth-callback',
       );
 
-      //  IMPORTANT: In Flutter, OAuth login happens in a web browser
-      // The actual user data will be available after the browser redirects back to your app
-
-      // Wait a moment for the auth state to update
       await Future.delayed(const Duration(seconds: 2));
 
-      // Check if user is now logged in
       final user = supabaseClient.auth.currentUser;
       if (user == null) {
-        throw Exception('Google login failed or was cancelled');
+        throw Exception('Google login failed or cancelled');
       }
 
       print("Google login successful: User ID = ${user.id}");
 
-      // Check if user exists in 'users' table
       final data = await supabaseClient
           .from('users')
           .select()
           .eq('id', user.id)
           .maybeSingle();
 
-      if (data != null) {
-        return UserModel.fromJson(data);
-      }
+      if (data != null) return UserModel.fromJson(data);
 
-      // Insert new user if not exists
       final name = user.userMetadata?['full_name'] ??
           user.userMetadata?['name'] ??
           'Google User';
-      final email = user.email ?? '${user.id}@google.com';
+      final email =
+          user.email ?? '${user.id}@google.com';
 
       await supabaseClient.from('users').insert({
         'id': user.id,
         'email': email,
         'name': name,
       });
-
-      print("New Google user created: $name, $email");
 
       return UserModel(id: user.id, email: email, name: name);
     } catch (e, st) {
@@ -226,16 +211,12 @@ class RemoteDataSourceImpl implements RemoteDataSource {
       rethrow;
     }
   }
+
   // =====================================================
-  //                      SESSION CHECK - CORRECTED
+  //                    🆕 SESSION RESTORATION
   // =====================================================
-  Future<bool> hasActiveSession() async {
-    try {
-      final session = supabaseClient.auth.currentSession;
-      return session != null;
-    } catch (e) {
-      print('Error checking session: $e');
-      return false;
-    }
+  @override
+  Session? getSession() {
+    return supabaseClient.auth.currentSession;
   }
 }

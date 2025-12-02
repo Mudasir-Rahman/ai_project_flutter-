@@ -21,6 +21,6 @@ abstract class AuthRepositoryInterface {
   Future<void> signOut();
   Future<Either<Failures, UserEntity>> register(String userId);
  Future<Either<Failures, UserEntity>> googleLogin();
- Future<bool>hasActiveSession();
+
 
 }
