@@ -13,6 +13,7 @@ class UploadFileParams {
   final String userId;
   final String? fileName;
   final String? description;
+  final String? fileExtension;
   final Map<String, dynamic>? metadata;
 
   const UploadFileParams({
@@ -21,11 +22,13 @@ class UploadFileParams {
     this.fileName,
     this.description,
     this.metadata,
+    this.fileExtension,
   });
 
   factory UploadFileParams.simple({
     required String filePath,
     required String userId,
+    required String fileExtension,
   }) {
     return UploadFileParams(
       filePath: filePath,
