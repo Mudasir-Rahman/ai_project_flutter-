@@ -1,222 +1,160 @@
 import 'package:study_forge_ai/src/features/auth/data/datasources/remote_data_source.dart';
 import 'package:study_forge_ai/src/features/auth/data/model/user_model.dart';
-import 'package:study_forge_ai/src/features/auth/domain/usecase/signup_usecase.dart';
-import 'package:study_forge_ai/src/features/auth/domain/usecase/user_login_usecase.dart';
+import 'package:supabase/supabase.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class RemoteDataSourceImpl implements RemoteDataSource {
   final SupabaseClient supabaseClient;
 
-  RemoteDataSourceImpl(this.supabaseClient);
+  RemoteDataSourceImpl({required this.supabaseClient});
 
-  // =====================================================
-  //                      SIGN UP
-  // =====================================================
-  Future<UserModel> signUp({
+  /// ---------------- GET CURRENT USER (SESSION SAFE) ----------------
+  @override
+  Future<UserModel> getCurrentUser() async {
+    var session = supabaseClient.auth.currentSession;
+    var user = supabaseClient.auth.currentUser;
+
+    if (session == null || user == null) {
+      throw AuthException('No authenticated user found');
+    }
+
+    if (session.isExpired) {
+      final response = await supabaseClient.auth.refreshSession();
+      session = response.session;
+      user = response.user;
+
+      if (session == null || user == null) {
+        throw AuthException('Session expired. Please login again.');
+      }
+    }
+
+    final data = await supabaseClient
+        .from('profiles')
+        .select()
+        .eq('id', user.id)
+        .single();
+
+    return UserModel.fromJson(data);
+  }
+
+  /// ---------------- LOGIN ----------------
+  @override
+  Future<UserModel> login({
     required String email,
     required String password,
-    required String name,
   }) async {
-    try {
-      print('Signup started for email: $email');
-
-      final AuthResponse response = await supabaseClient.auth.signUp(
-        email: email,
-        password: password,
-      );
-
-      final user = response.user;
-      if (user == null) {
-        throw Exception('User signup failed');
-      }
-
-      print("Auth Signup Successful: User ID = ${user.id}");
-
-      await supabaseClient.from('users').insert({
-        'id': user.id,
-        'email': email,
-        'name': name,
-      });
-
-      print("User inserted into table successfully");
-
-      return UserModel(id: user.id, email: email, name: name);
-    } catch (e, st) {
-      print('Error during signup: $e');
-      print(st);
-      rethrow;
-    }
-  }
-
-  @override
-  Future<UserModel> signUpWithEmail(SignupParams params) async {
-    return await signUp(
-      email: params.email,
-      password: params.password,
-      name: params.name,
+    final response = await supabaseClient.auth.signInWithPassword(
+      email: email,
+      password: password,
     );
-  }
 
-  // =====================================================
-  //                      LOGIN
-  // =====================================================
-  Future<UserModel> login(UserLoginParams params) async {
-    try {
-      print('Login started for email: ${params.email}');
-
-      final AuthResponse response = await supabaseClient.auth
-          .signInWithPassword(email: params.email, password: params.password);
-
-      final user = response.user;
-      if (user == null) {
-        throw Exception('Invalid email or password');
-      }
-
-      print("Login successful: User ID = ${user.id}");
-
-      final data = await supabaseClient
-          .from('users')
-          .select()
-          .eq('id', user.id)
-          .single();
-
-      print('Fetched user data: $data');
-
-      return UserModel.fromJson(data);
-    } catch (e, st) {
-      print('Error during login: $e');
-      print(st);
-      rethrow;
+    final user = response.user;
+    if (user == null) {
+      throw AuthException('Invalid email or password');
     }
+
+    final data = await supabaseClient
+        .from('profiles')
+        .select()
+        .eq('id', user.id)
+        .single();
+
+    return UserModel.fromJson(data);
   }
 
+  /// ---------------- SIGNUP ----------------
   @override
-  Future<UserModel> signInWithEmail(UserLoginParams params) async {
-    return await login(params);
-  }
+  Future<UserModel> signup({
+    required String email,
+    required String password,
+    required String fullName,
+  }) async {
+    final response = await supabaseClient.auth.signUp(
+      email: email,
+      password: password,
+    );
 
-  // =====================================================
-  //                GET CURRENT LOGGED-IN USER
-  // =====================================================
-  @override
-  Future<UserModel?> getCurrentUser() async {
-    try {
-      final user = supabaseClient.auth.currentUser;
-      if (user == null) {
-        print('❌ No auth user');
-        return null;
-      }
-
-      print('🔍 Fetching user data for ID: ${user.id}');
-
-      final data = await supabaseClient
-          .from('users')
-          .select()
-          .eq('id', user.id)
-          .maybeSingle();
-
-      if (data == null) {
-        print('❌ No user found in users table for ID: ${user.id}');
-        return null;
-      }
-
-      print('✅ User data found: $data');
-      return UserModel.fromJson(data);
-    } catch (e, st) {
-      print('❌ Error fetching current user: $e');
-      print(st);
-      return null;
+    final user = response.user;
+    if (user == null) {
+      throw AuthException('Failed to create user');
     }
+
+    final model = UserModel(
+      id: user.id,
+      email: user.email!,
+      fullName: fullName,
+      profileImage: null,
+      createdAt: DateTime.now(),
+    );
+
+    await supabaseClient.from('profiles').insert(model.toJson());
+    return model;
   }
 
-  // =====================================================
-  //                      REGISTER CHECK
-  // =====================================================
+  /// ---------------- UPDATE PROFILE ----------------
   @override
-  Future<bool> register(String userId) async {
-    try {
-      final res = await supabaseClient
-          .from('users')
-          .select()
-          .eq('id', userId)
-          .maybeSingle();
+  Future<UserModel> updateProfile({
+    required String fullName,
+    required String profileImage,
+  }) async {
+    final user = supabaseClient.auth.currentUser;
 
-      return res != null;
-    } catch (e, st) {
-      print('Error during register check: $e');
-      print(st);
-      return false;
+    if (user == null) {
+      throw AuthException('No authenticated user found');
     }
+
+    await supabaseClient.from('profiles').update({
+      'full_name': fullName,
+      'profile_image': profileImage,
+    }).eq('id', user.id);
+
+    final updatedData = await supabaseClient
+        .from('profiles')
+        .select()
+        .eq('id', user.id)
+        .single();
+
+    return UserModel.fromJson(updatedData);
   }
 
-  // =====================================================
-  //                      SIGN OUT
-  // =====================================================
+  /// ---------------- GOOGLE SIGN IN ----------------
   @override
-  Future<void> signOut() async {
-    try {
-      await supabaseClient.auth.signOut();
-      print('User signed out successfully');
-    } catch (e, st) {
-      print('Error during sign out: $e');
-      print(st);
-      rethrow;
+  Future<UserModel> signUpWithGoogle() async {
+    await supabaseClient.auth.signInWithOAuth(
+      Provider.google,
+      redirectTo: 'https://aybarnykcohzlqhetjbe.supabase.co/auth/v1/callback',
+    );
+
+    final user = supabaseClient.auth.currentUser;
+    if (user == null) {
+      throw AuthException('Google sign-in failed');
     }
-  }
 
-  // =====================================================
-  //                      GOOGLE LOGIN
-  // =====================================================
-  @override
-  Future<UserModel?> googleLogin() async {
-    try {
-      await supabaseClient.auth.signInWithOAuth(
-        OAuthProvider.google,
-        redirectTo: 'studyforgeai://auth-callback',
-      );
+    final existingProfile = await supabaseClient
+        .from('profiles')
+        .select()
+        .eq('id', user.id)
+        .maybeSingle();
 
-      await Future.delayed(const Duration(seconds: 2));
-
-      final user = supabaseClient.auth.currentUser;
-      if (user == null) {
-        throw Exception('Google login failed or cancelled');
-      }
-
-      print("Google login successful: User ID = ${user.id}");
-
-      final data = await supabaseClient
-          .from('users')
-          .select()
-          .eq('id', user.id)
-          .maybeSingle();
-
-      if (data != null) return UserModel.fromJson(data);
-
-      final name = user.userMetadata?['full_name'] ??
-          user.userMetadata?['name'] ??
-          'Google User';
-      final email =
-          user.email ?? '${user.id}@google.com';
-
-      await supabaseClient.from('users').insert({
-        'id': user.id,
-        'email': email,
-        'name': name,
-      });
-
-      return UserModel(id: user.id, email: email, name: name);
-    } catch (e, st) {
-      print('Error during Google login: $e');
-      print(st);
-      rethrow;
+    if (existingProfile != null) {
+      return UserModel.fromJson(existingProfile);
     }
+
+    final model = UserModel(
+      id: user.id,
+      email: user.email!,
+      fullName: user.userMetadata?['full_name'] ?? '',
+      profileImage: user.userMetadata?['avatar_url'],
+      createdAt: DateTime.now(),
+    );
+
+    await supabaseClient.from('profiles').insert(model.toJson());
+    return model;
   }
 
-  // =====================================================
-  //                    🆕 SESSION RESTORATION
-  // =====================================================
+  /// ---------------- LOGOUT ----------------
   @override
-  Session? getSession() {
-    return supabaseClient.auth.currentSession;
+  Future<void> logout() async {
+    await supabaseClient.auth.signOut();
   }
 }

@@ -1,17 +1,21 @@
 import 'package:study_forge_ai/src/features/auth/data/model/user_model.dart';
-import 'package:study_forge_ai/src/features/auth/domain/usecase/signup_usecase.dart'
-    show SignupParams;
-import 'package:study_forge_ai/src/features/auth/domain/usecase/user_login_usecase.dart'
-    show UserLoginParams;
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 abstract class RemoteDataSource {
-  Future<UserModel> signUpWithEmail(SignupParams params);
-  Future<UserModel> signInWithEmail(UserLoginParams params);
-  Future<UserModel?> getCurrentUser();
-  Future<void> signOut();
-  Future<bool> register(String userId);
-  Future<UserModel?> googleLogin();
-  Session? getSession();
+  Future<UserModel> login({
+    required String email,
+    required String password,
+  });
+  Future<UserModel> getCurrentUser();
+  Future<void> logout();
+  Future<UserModel> updateProfile({
+    required String fullName,
+    required String profileImage,
+  });
+  Future<UserModel> signUpWithGoogle();
+  Future<UserModel> signup({
+    required String email,
+    required String password,
+    required String fullName,
+  });
 
 }

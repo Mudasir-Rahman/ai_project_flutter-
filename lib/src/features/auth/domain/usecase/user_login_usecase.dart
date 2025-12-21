@@ -5,7 +5,7 @@ import 'package:study_forge_ai/src/features/auth/domain/auth_entity/entity.dart'
 import 'package:study_forge_ai/src/features/auth/domain/repository/respository_interface.dart';
 
 class UserLoginUsecase implements UseCase<UserEntity, UserLoginParams> {
-  final AuthRepositoryInterface repository;
+  final AuthRepository repository;
   UserLoginUsecase(this.repository);
   @override
   Future<Either<Failures, UserEntity>> call(UserLoginParams params) async {

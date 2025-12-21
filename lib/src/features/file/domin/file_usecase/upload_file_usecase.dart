@@ -1,30 +1,30 @@
 // features/file/domain/usecases/upload_file_usecase.dart
+
 import 'dart:io';
-
 import 'package:dartz/dartz.dart';
-import '../../../../core/error/failures.dart';
 
+import '../../../../core/error/failures.dart';
 import '../file_entity/file_entity.dart';
 import '../repositories/file_repositories.dart';
-
 
 class UploadFileParams {
   final String filePath;
   final String userId;
   final String? fileName;
   final String? description;
-  final String? fileExtension;
+  final String fileExtension;
   final Map<String, dynamic>? metadata;
 
   const UploadFileParams({
     required this.filePath,
     required this.userId,
+    required this.fileExtension,
     this.fileName,
     this.description,
     this.metadata,
-    this.fileExtension,
   });
 
+  /// Simple version
   factory UploadFileParams.simple({
     required String filePath,
     required String userId,
@@ -33,6 +33,10 @@ class UploadFileParams {
     return UploadFileParams(
       filePath: filePath,
       userId: userId,
+      fileExtension: fileExtension,
+      fileName: null,
+      description: null,
+      metadata: null,
     );
   }
 }
@@ -43,6 +47,6 @@ class UploadFileUseCase {
   UploadFileUseCase(this.repository);
 
   Future<Either<Failures, FileEntity>> call(UploadFileParams params) async {
-    return await repository.uploadFile(params );
+    return await repository.uploadFile(params);
   }
 }

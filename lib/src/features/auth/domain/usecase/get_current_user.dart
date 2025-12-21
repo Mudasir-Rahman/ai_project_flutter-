@@ -1,12 +1,15 @@
 import 'package:dartz/dartz.dart';
-import 'package:study_forge_ai/src/core/error/failures.dart';
-import 'package:study_forge_ai/src/features/auth/domain/auth_entity/entity.dart';
-import 'package:study_forge_ai/src/features/auth/domain/repository/respository_interface.dart';
+import 'package:study_forge_ai/src/core/useCase/use_case.dart';
 
-class GetCurrentuser {
-  final AuthRepositoryInterface repository;
-  GetCurrentuser(this.repository);
-  Future<Either<Failures, UserEntity?>> call() async {
-    return await repository.getCurrentUser();
+import '../../../../core/error/failures.dart';
+import '../auth_entity/entity.dart';
+import '../repository/respository_interface.dart';
+
+class GetCurrentUser implements UseCase<UserEntity?,NoParams> {
+  final AuthRepository authRepository;
+  GetCurrentUser(this.authRepository);
+  @override
+  Future<Either<Failures, UserEntity?>> call(NoParams params) async {
+   return await authRepository.getCurrentUser();
   }
 }
